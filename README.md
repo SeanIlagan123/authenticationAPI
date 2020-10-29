@@ -1,2 +1,2 @@
 # back-end-web
-Uses Express, Nodemon
+Uses Express, Nodemon, body-parser, mongodb, mongoose
