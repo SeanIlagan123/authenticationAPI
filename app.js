@@ -11,14 +11,8 @@ app.use(bodyParser.json());
 const usersRoute = require('./routes/users');
 
 // Middleware
+
 app.use('/users', usersRoute);
-
-
-//Regular Route
-/* app.get('/', (req,res) => {
-    res.send('home');
-});
- */
 
 // Connect to Database
 mongoose.connect(
@@ -26,5 +20,9 @@ mongoose.connect(
     {useNewUrlParser: true, useUnifiedTopology: true},
     () => console.log('connected to Database')
 );
+
+// Prevents errors when running and closing multiple times.
+process.on("uncaughtException", () => server.close());
+process.on("SIGTERM", () => server.close());
 
 app.listen(3001);

@@ -9,8 +9,7 @@ const UserSchema = mongoose.Schema({
     password: {
         type: String,
         required: true
-    },
-    userID: Number
+    }
 })
 
 module.exports = mongoose.model('Users', UserSchema);
