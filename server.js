@@ -2,39 +2,25 @@
 const mongoose = require('mongoose');
 const express = require('express');
 const app = express();
-const bodyParser = require('body-parser')
+const dotenv = require('dotenv');
 const cors = require('cors');
-const passport = require('passport');
-require('dotenv/config');
-
 //Import Routes
-const usersRoute = require('./routes/users');
+const authRoute = require('./routes/auth');
 
-//Middlewares
+dotenv.config();
+
+// Database Connection
+mongoose.connect(process.env.DB_CONNECTION,
+{useNewUrlParser: true, useUnifiedTopology: true},
+() => console.log('Connected to Database')
+)
+
+//Middleware
 app.use(cors());
-app.use(
-    bodyParser.urlencoded({
-      extended: false
-    })
-  );
-app.use(bodyParser.json());
+app.use(express.json());
 
-// Database config 
-const db = require("./config/keys").mongoURI;
-
-// Connect to Database
-mongoose.connect(
-    db,
-    {useNewUrlParser: true, useUnifiedTopology: true},
-    () => console.log('Connected to Database')
-);
-
-// Passport Middleware and config
-app.use(passport.initialize());
-require("./config/passport")(passport);
-
-app.use('/users', usersRoute);
-
+//Route Middlewares
+app.use('/api/user', authRoute);
 
 // Prevents errors when running and closing multiple times.
 process.on("uncaughtException", () => server.close());
