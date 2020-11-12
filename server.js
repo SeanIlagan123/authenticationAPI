@@ -2,6 +2,7 @@
 const mongoose = require('mongoose');
 const express = require('express');
 const app = express();
+const cookieParser = require('cookie-parser');
 const dotenv = require('dotenv');
 const cors = require('cors');
 //Import Routes
@@ -16,8 +17,10 @@ mongoose.connect(process.env.DB_CONNECTION,
 )
 
 //Middleware
-app.use(cors());
+app.use(cors({origin: 'http://localhost:3000', credentials: true}));
+app.use(cookieParser());
 app.use(express.json());
+
 
 //Route Middlewares
 app.use('/api/user', authRoute);

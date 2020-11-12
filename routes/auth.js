@@ -64,6 +64,14 @@ router.post('/login', async (req, res) => {
         const accessToken = generateAccessToken(existingUser);
         const refreshToken = jwt.sign({id: existingUser._id}, process.env.REFRESH_TOKEN_SECRET);
         refreshTokens.push(refreshToken);
+        res.cookie("access", accessToken, {
+            secure: false,
+            httpOnly: true
+        })
+        res.cookie("refresh", refreshToken, {
+            secure: false,
+            httpOnly: true
+        })
         res.json({
             accessToken,
             refreshToken,
@@ -111,9 +119,20 @@ router.post("/refresh", (req, res) => {
     })
 })
 
-router.delete('/logout', (req,res) => {
-    refreshTokens = refreshTokens.filter(token => token !== req.body.token)
-    res.sendStatus(204);
+router.get('/logout', async (req,res) => {
+    // refreshTokens = refreshTokens.filter(token => token !== req.body.token)
+    res.cookie("access", "Expired", {
+        maxAge: 0,
+        secure: false,
+        httpOnly: true
+    })
+    res.cookie("refresh", "Expired", {
+        maxAge: 0,
+        secure: false,
+        httpOnly: true
+    })
+    res.sendStatus(200).json({status: 'User logged out'});
 })
+
 
 module.exports = router;
