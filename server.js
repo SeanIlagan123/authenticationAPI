@@ -1,3 +1,4 @@
+// https://dev.to/mr_cea/remaining-stateless-jwt-cookies-in-node-js-3lle
 // Importing and executing Express
 const mongoose = require('mongoose');
 const express = require('express');

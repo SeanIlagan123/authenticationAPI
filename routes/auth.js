@@ -1,5 +1,6 @@
 // https://www.youtube.com/watch?v=frdMgKC-0r8
 // https://www.youtube.com/watch?v=mbsmsi7l3r4
+// https://dev.to/mr_cea/remaining-stateless-jwt-cookies-in-node-js-3lle
 require('dotenv').config();
 const router = require('express').Router();
 const User = require('../models/User');
@@ -8,7 +9,7 @@ const bcrypt = require('bcryptjs');
 let refreshTokens = [];
 
 function generateAccessToken(user) {
-    return jwt.sign({user: user._id}, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '15s' }); 
+    return jwt.sign({user: user._id}, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '5s' }); 
 }
 
 router.post('/register', async (req, res) => {
@@ -80,16 +81,13 @@ router.post('/login', async (req, res) => {
                 username: existingUser.username
             }
         })
-        console.log(accessToken);
     } catch (err) {
         res.status(500).json({error: err.message})
     }
 });
 
 function auth(req, res, next) {
-    let token = req.headers['authorization'];
-    token = token.split(' ')[1]; // Takes the token instead of the entire 'Bearer' statement.
-
+    let token = req.cookies.access;
     jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, user) => {
         if(!err) {
             req.user = user;
@@ -105,13 +103,17 @@ router.post('/protected', auth, (req, res) => {
 })
 
 router.post("/refresh", (req, res) => {
-    const refreshToken = req.body.token;
+    const refreshToken = req.cookies.refresh;
     if(!refreshToken || !refreshTokens.includes(refreshToken)) {
         return res.status(403).json({message: "User not authenticated"});
     }
     jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET, (err,user) => {
         if (!err) {
             const accessToken = generateAccessToken({ username: user.username });
+            res.cookie("access", accessToken, {
+                secure: false,
+                httpOnly: true
+            })
             return res.status(201).json({ accessToken });
         } else {
             return res.status(403).json({message: "User not authenticated"});
@@ -119,8 +121,7 @@ router.post("/refresh", (req, res) => {
     })
 })
 
-router.get('/logout', async (req,res) => {
-    // refreshTokens = refreshTokens.filter(token => token !== req.body.token)
+router.get('/logout', auth, (req,res) => {
     res.cookie("access", "Expired", {
         maxAge: 0,
         secure: false,
@@ -131,8 +132,13 @@ router.get('/logout', async (req,res) => {
         secure: false,
         httpOnly: true
     })
-    res.sendStatus(200).json({status: 'User logged out'});
+    res.redirect('/');
 })
 
+// A get request to check if a user is logged in.
+router.post('/status', auth , (req,res) => {
+    res.json({ success: true })
+});
+// https://www.youtube.com/watch?v=qPWkPZwMze0&list=LL&index=12
 
 module.exports = router;
