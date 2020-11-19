@@ -7,10 +7,17 @@ const User = require("../models/User");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 let refreshTokens = [];
+let accessExpire = '14400000'; // Change this value to set the expire time for the accessTokens.
+// NOTE: This is in milliseconds
+// This is set to 4 hours.
+// Conversions
+// 1 day = 86400000
+// 1 hour = 3600000ms
+// 1 min = 60000ms
 
 function generateAccessToken(user) {
   return jwt.sign({ user: user._id }, process.env.ACCESS_TOKEN_SECRET, {
-    expiresIn: "15s",
+    expiresIn: accessExpire,
   });
 }
 
@@ -83,13 +90,13 @@ router.post("/login", async (req, res) => {
       httpOnly: true,
     });
     res.cookie("username", existingUser.username);
-    res.cookie("username", existingUser.username);
     res.json({
       accessToken,
       refreshToken,
       user: {
         id: existingUser._id,
         username: existingUser.username,
+        accessExpire: accessExpire
       },
     });
   } catch (err) {
@@ -97,12 +104,18 @@ router.post("/login", async (req, res) => {
   }
 });
 
+// Middleware
 function auth(req, res, next) {
   let token = req.cookies.access;
   jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, user) => {
     if (!err) {
       req.user = user;
       next();
+    } else if (err.message === "jwt expired") {
+      return res.json({
+        success: false,
+        message: "Access token expired",
+      });
     } else {
       return res.status(403).json({ message: "User not authenticated" });
     }
@@ -116,7 +129,7 @@ router.post("/protected", auth, (req, res) => {
 router.post("/refresh", (req, res) => {
   const refreshToken = req.cookies.refresh;
   if (!refreshToken || !refreshTokens.includes(refreshToken)) {
-    return res.status(403).json({ message: "User not authenticated" });
+    return res.status(403).json({ message: "Refresh token not found" });
   }
   jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET, (err, user) => {
     if (!err) {
@@ -125,9 +138,11 @@ router.post("/refresh", (req, res) => {
         secure: false,
         httpOnly: true,
       });
-      return res.status(201).json({ accessToken });
+      return res.status(201).json({ success: true, accessToken });
     } else {
-      return res.status(403).json({ message: "User not authenticated" });
+      return res
+        .status(403)
+        .json({ success: false, message: "Invalid refresh token" });
     }
   });
 });
@@ -145,9 +160,13 @@ router.get("/logout", auth, (req, res) => {
   res.redirect("/");
 });
 
+router.get("/expireTime", (req, res) => {
+  res.json({accessExpire: accessExpire})
+})
+
 // A get request to check if a user is logged in.
 router.post("/status", auth, (req, res) => {
-  res.json({ success: true });
+  return res.json({ success: true });
 });
 // https://www.youtube.com/watch?v=qPWkPZwMze0&list=LL&index=12
 
